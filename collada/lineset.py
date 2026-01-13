@@ -20,6 +20,7 @@ from collada.common import E
 from collada.common import DaeIncompleteError, DaeMalformedError
 
 
+
 class Line(object):
     """Single line representation. Represents the line between two points
     ``(x0,y0,z0)`` and ``(x1,y1,z1)``. A Line is read-only."""
@@ -71,9 +72,12 @@ class LineSet(primitive.Primitive):
         if not sources.get('VERTEX'):
             raise DaeIncompleteError('Line set requires vertex input')
 
-        # find max offset
-        max_offset = max([max([input[0] for input in input_type_array])
-                          for input_type_array in sources.values() if len(input_type_array) > 0])
+        # find max offset - optimized version
+        max_offset = 0
+        for input_type_array in sources.values():
+            for inp in input_type_array:
+                if inp[0] > max_offset:
+                    max_offset = inp[0]
 
         self.sources = sources
         self.material = material
@@ -168,22 +172,23 @@ class LineSet(primitive.Primitive):
             indexnode = node.find(tags['p'])
             input_tag = tags['input']
         else:
-            indexnode = node.find(collada.tag('p'))
-            input_tag = collada.tag('input')
+            from collada.common import tag
+            indexnode = node.find(tag('p'))
+            input_tag = tag('input')
         if indexnode is None:
             raise DaeIncompleteError('Missing index in line set')
 
         source_array = primitive.Primitive._getInputs(collada, localscope, node.findall(input_tag))
 
         try:
-            if indexnode.text is None or indexnode.text.isspace():
+            text = indexnode.text
+            if text is None or text.isspace():
                 index = numpy.array([], dtype=numpy.int32)
             else:
                 try:
-                    index = numpy.fromstring(indexnode.text, dtype=numpy.int32, sep=' ')
+                    index = numpy.fromstring(text, dtype=numpy.int32, sep=' ')
                 except ValueError:
                     raise DaeMalformedError("Failed to parse lineset index integers")
-            index[numpy.isnan(index)] = 0
         except BaseException:
             raise DaeMalformedError('Corrupted index in line set')
 

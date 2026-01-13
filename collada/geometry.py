@@ -173,84 +173,101 @@ class Geometry(DaeObject):
 
         # Use pre-cached tags for efficiency
         tags = getattr(collada, '_tags', None)
-        if tags:
-            tag_mesh = tags['mesh']
-            tag_source = tags['source']
-            tag_vertices = tags['vertices']
-            tag_input = tags['input']
-            tag_extra = tags['extra']
-            tag_double_sided = tags['double_sided']
-            tag_polylist = tags['polylist']
-            tag_triangles = tags['triangles']
-            tag_lines = tags['lines']
-            tag_polygons = tags['polygons']
-            # These aren't in pre-cache, compute once
-            tag_tristrips = collada.tag('tristrips')
-            tag_trifans = collada.tag('trifans')
-        else:
-            tag_mesh = collada.tag('mesh')
-            tag_source = collada.tag('source')
-            tag_vertices = collada.tag('vertices')
-            tag_input = collada.tag('input')
-            tag_extra = collada.tag('extra')
-            tag_double_sided = collada.tag('double_sided')
-            tag_polylist = collada.tag('polylist')
-            tag_triangles = collada.tag('triangles')
-            tag_tristrips = collada.tag('tristrips')
-            tag_trifans = collada.tag('trifans')
-            tag_lines = collada.tag('lines')
-            tag_polygons = collada.tag('polygons')
+        if tags is None:
+            # Fallback for when called with module instead of instance
+            from collada.common import tag as tag_func
+            tags = {
+                'mesh': tag_func('mesh'),
+                'source': tag_func('source'),
+                'vertices': tag_func('vertices'),
+                'input': tag_func('input'),
+                'extra': tag_func('extra'),
+                'double_sided': tag_func('double_sided'),
+                'polylist': tag_func('polylist'),
+                'triangles': tag_func('triangles'),
+                'lines': tag_func('lines'),
+                'polygons': tag_func('polygons'),
+                'tristrips': tag_func('tristrips'),
+                'trifans': tag_func('trifans'),
+            }
+        tag_mesh = tags['mesh']
+        tag_source = tags['source']
+        tag_vertices = tags['vertices']
+        tag_input = tags['input']
+        tag_extra = tags['extra']
+        tag_double_sided = tags['double_sided']
+        tag_polylist = tags['polylist']
+        tag_triangles = tags['triangles']
+        tag_lines = tags['lines']
+        tag_polygons = tags['polygons']
+        tag_tristrips = tags.get('tristrips')
+        tag_trifans = tags.get('trifans')
+        if tag_tristrips is None:
+            tag_func = getattr(collada, 'tag', None)
+            if tag_func:
+                tag_tristrips = tag_func('tristrips')
+                tags['tristrips'] = tag_tristrips
+        if tag_trifans is None:
+            tag_func = getattr(collada, 'tag', None)
+            if tag_func:
+                tag_trifans = tag_func('trifans')
+                tags['trifans'] = tag_trifans
 
         meshnode = node.find(tag_mesh)
         if meshnode is None:
             raise DaeUnsupportedError('Unknown geometry node')
+        
         sourcebyid = {}
-        sources = []
-        sourcenodes = node.findall('%s/%s' % (tag_mesh, tag_source))
-        for sourcenode in sourcenodes:
-            ch = source.Source.load(collada, {}, sourcenode)
-            sources.append(ch)
-            sourcebyid[ch.id] = ch
-
-        verticesnode = meshnode.find(tag_vertices)
-        if verticesnode is not None:
-            inputnodes = {}
-            for inputnode in verticesnode.findall(tag_input):
-                semantic = inputnode.get('semantic')
-                inputsource = inputnode.get('source')
-                if not semantic or not inputsource or not inputsource.startswith('#'):
-                    raise DaeIncompleteError('Bad input definition inside vertices')
-                inputnodes[semantic] = sourcebyid.get(inputsource[1:])
-            if (not verticesnode.get('id') or len(inputnodes) == 0 or
-                    'POSITION' not in inputnodes):
-                raise DaeIncompleteError('Bad vertices definition in mesh')
-            sourcebyid[verticesnode.get('id')] = inputnodes
-            verticesnode.get('id')
-
-        double_sided_node = node.find('.//%s//%s' % (tag_extra, tag_double_sided))
+        # Iterate directly over mesh children instead of using XPath
+        for subnode in meshnode:
+            if subnode.tag == tag_source:
+                ch = source.Source.load(collada, {}, subnode)
+                sourcebyid[ch.id] = ch
+            elif subnode.tag == tag_vertices:
+                # Process vertices node inline
+                inputnodes = {}
+                for inputnode in subnode:
+                    if inputnode.tag == tag_input:
+                        semantic = inputnode.get('semantic')
+                        inputsource = inputnode.get('source')
+                        if not semantic or not inputsource or not inputsource.startswith('#'):
+                            raise DaeIncompleteError('Bad input definition inside vertices')
+                        inputnodes[semantic] = sourcebyid.get(inputsource[1:])
+                vertices_id = subnode.get('id')
+                if not vertices_id or len(inputnodes) == 0 or 'POSITION' not in inputnodes:
+                    raise DaeIncompleteError('Bad vertices definition in mesh')
+                sourcebyid[vertices_id] = inputnodes
+        
+        # Find double_sided flag - use simpler iteration
         double_sided = False
-        if double_sided_node is not None and double_sided_node.text is not None:
-            try:
-                val = int(double_sided_node.text)
-                if val == 1:
-                    double_sided = True
-            except ValueError:
-                pass
+        for extra in node.iter(tag_extra):
+            for ds_node in extra.iter(tag_double_sided):
+                if ds_node.text is not None:
+                    try:
+                        if int(ds_node.text) == 1:
+                            double_sided = True
+                            break
+                    except ValueError:
+                        pass
+            if double_sided:
+                break
 
         _primitives = []
         tri_tags = (tag_triangles, tag_tristrips, tag_trifans)
+        skip_tags = (tag_source, tag_vertices, tag_extra)
 
         for subnode in meshnode:
-            if subnode.tag == tag_polylist:
+            stag = subnode.tag
+            if stag == tag_polylist:
                 _primitives.append(polylist.Polylist.load(collada, sourcebyid, subnode))
-            elif subnode.tag in tri_tags:
+            elif stag in tri_tags:
                 _primitives.append(triangleset.TriangleSet.load(collada, sourcebyid, subnode))
-            elif subnode.tag == tag_lines:
+            elif stag == tag_lines:
                 _primitives.append(lineset.LineSet.load(collada, sourcebyid, subnode))
-            elif subnode.tag == tag_polygons:
+            elif stag == tag_polygons:
                 _primitives.append(polygons.Polygons.load(collada, sourcebyid, subnode))
-            elif subnode.tag != tag_source and subnode.tag != tag_vertices and subnode.tag != tag_extra:
-                raise DaeUnsupportedError('Unknown geometry tag %s' % subnode.tag)
+            elif stag not in skip_tags:
+                raise DaeUnsupportedError('Unknown geometry tag %s' % stag)
         geom = Geometry(collada, id, name, sourcebyid, _primitives, xmlnode=node, double_sided=double_sided)
         return geom
 

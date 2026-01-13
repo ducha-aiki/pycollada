@@ -17,6 +17,13 @@ import numpy
 from collada.common import DaeObject, E, tag
 from collada.common import DaeIncompleteError, DaeMalformedError, DaeUnsupportedError
 
+# Try to import fast Cython parsing functions
+try:
+    from collada._source_cy import parse_float_array_fast, parse_int_array_fast
+    _HAVE_CYTHON = True
+except ImportError:
+    _HAVE_CYTHON = False
+
 
 class InputList(object):
     """Used for defining input sources to a geometry."""
@@ -97,19 +104,18 @@ class Source(DaeObject):
             if arraynode is not None:
                 return NameSource.load(collada, localscope, node)
         else:
-            # Fallback for when tags aren't pre-cached
-            arraynode = node.find(collada.tag('float_array'))
+            # Fallback for when called with module instead of instance
+            arraynode = node.find(tag('float_array'))
             if arraynode is not None:
                 return FloatSource.load(collada, localscope, node)
-            arraynode = node.find(collada.tag('IDREF_array'))
+            arraynode = node.find(tag('IDREF_array'))
             if arraynode is not None:
                 return IDRefSource.load(collada, localscope, node)
-            arraynode = node.find(collada.tag('Name_array'))
+            arraynode = node.find(tag('Name_array'))
             if arraynode is not None:
                 return NameSource.load(collada, localscope, node)
 
-        if arraynode is None:
-            raise DaeIncompleteError('No array found in source %s' % sourceid)
+        raise DaeIncompleteError('No array found in source %s' % sourceid)
 
 
 class FloatSource(Source):
@@ -208,37 +214,45 @@ class FloatSource(Source):
         if tags:
             arraynode = node.find(tags['float_array'])
         else:
-            arraynode = node.find(collada.tag('float_array'))
+            arraynode = node.find(tag('float_array'))
         if arraynode is None:
             raise DaeIncompleteError('No float_array in source node')
-        if arraynode.text is None or arraynode.text.isspace():
+        text = arraynode.text
+        if text is None or text.isspace():
             data = numpy.array([], dtype=numpy.float32)
         else:
             try:
-                data = numpy.fromstring(arraynode.text, dtype=numpy.float32, sep=' ')
+                if _HAVE_CYTHON:
+                    count_str = arraynode.get('count')
+                    count = int(count_str) if count_str else -1
+                    if count > 0:
+                        data = parse_float_array_fast(text, count)
+                    else:
+                        data = numpy.fromstring(text, dtype=numpy.float32, sep=' ')
+                else:
+                    data = numpy.fromstring(text, dtype=numpy.float32, sep=' ')
             except ValueError:
                 raise DaeMalformedError('Corrupted float array')
-        # Replace NaN values with 0
-        data[numpy.isnan(data)] = 0
 
         # Use pre-cached XPath for accessor params
         accessor_path = getattr(collada, '_xpath_accessor_params', None)
         if accessor_path is None:
-            accessor_path = '%s/%s/%s' % (collada.tag('technique_common'), collada.tag('accessor'), collada.tag('param'))
+            accessor_path = '%s/%s/%s' % (tag('technique_common'), tag('accessor'), tag('param'))
         paramnodes = node.findall(accessor_path)
         if not paramnodes:
             raise DaeIncompleteError('No accessor info in source node')
-        components = [param.get('name') for param in paramnodes]
-        if len(components) == 2 and components[0] == 'U' and components[1] == 'V':
+        components = tuple(param.get('name') for param in paramnodes)
+        ncomp = len(components)
+        if ncomp == 2 and components[0] == 'U' and components[1] == 'V':
             # U,V is used for "generic" arguments - convert to S,T
-            components = ['S', 'T']
-        if len(components) == 3 and components[0] == 'S' and components[1] == 'T' and components[2] == 'P':
-            components = ['S', 'T']
+            components = ('S', 'T')
+        elif ncomp == 3 and components[0] == 'S' and components[1] == 'T' and components[2] == 'P':
+            components = ('S', 'T')
             data.shape = (-1, 3)
             # remove 3d texcoord dimension because we don't support it
             data = numpy.delete(data, -1, 1)
             data.shape = (-1)
-        return FloatSource(sourceid, data, tuple(components), xmlnode=node)
+        return FloatSource(sourceid, data, components, xmlnode=node)
 
     def __str__(self):
         return '<FloatSource size=%d>' % (len(self),)

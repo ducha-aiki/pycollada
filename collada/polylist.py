@@ -21,6 +21,7 @@ from collada.common import DaeIncompleteError, DaeMalformedError
 from collada.util import checkSource
 
 
+
 class Polygon(object):
     """Single polygon representation. Represents a polygon of N points."""
 
@@ -131,9 +132,12 @@ class Polylist(primitive.Primitive):
         if 'VERTEX' not in sources:
             raise DaeIncompleteError('Polylist requires vertex input')
 
-        # find max offset
-        max_offset = max([max([input[0] for input in input_type_array])
-                          for input_type_array in sources.values() if len(input_type_array) > 0])
+        # find max offset - optimized version
+        max_offset = 0
+        for input_type_array in sources.values():
+            for inp in input_type_array:
+                if inp[0] > max_offset:
+                    max_offset = inp[0]
 
         self.material = material
         self.index = index
@@ -270,37 +274,38 @@ class Polylist(primitive.Primitive):
             vcountnode = node.find(tags['vcount'])
             input_tag = tags['input']
         else:
-            indexnode = node.find(collada.tag('p'))
-            vcountnode = node.find(collada.tag('vcount'))
-            input_tag = collada.tag('input')
+            from collada.common import tag
+            indexnode = node.find(tag('p'))
+            vcountnode = node.find(tag('vcount'))
+            input_tag = tag('input')
         if indexnode is None:
             raise DaeIncompleteError('Missing index in polylist')
         if vcountnode is None:
             raise DaeIncompleteError('Missing vcount in polylist')
 
         try:
-            if vcountnode.text is None or vcountnode.text.isspace():
+            vcount_text = vcountnode.text
+            if vcount_text is None or vcount_text.isspace():
                 vcounts = numpy.array([], dtype=numpy.int32)
             else:
                 try:
-                    vcounts = numpy.fromstring(vcountnode.text, dtype=numpy.int32, sep=' ')
+                    vcounts = numpy.fromstring(vcount_text, dtype=numpy.int32, sep=' ')
                 except ValueError:
                     raise DaeMalformedError("Failed to parse polylist vcount integers")
-            vcounts[numpy.isnan(vcounts)] = 0
         except ValueError:
             raise DaeMalformedError('Corrupted vcounts in polylist')
 
         all_inputs = primitive.Primitive._getInputs(collada, localscope, node.findall(input_tag))
 
         try:
-            if indexnode.text is None or indexnode.text.isspace():
+            index_text = indexnode.text
+            if index_text is None or index_text.isspace():
                 index = numpy.array([], dtype=numpy.int32)
             else:
                 try:
-                    index = numpy.fromstring(indexnode.text, dtype=numpy.int32, sep=' ')
+                    index = numpy.fromstring(index_text, dtype=numpy.int32, sep=' ')
                 except ValueError:
                     raise DaeMalformedError("Failed to parse poylist index integers")
-            index[numpy.isnan(index)] = 0
         except BaseException:
             raise DaeMalformedError('Corrupted index in polylist')
 

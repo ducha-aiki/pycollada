@@ -20,6 +20,7 @@ from collada.common import DaeIncompleteError, DaeMalformedError
 from collada.util import toUnitVec, checkSource, normalize_v3, dot_v3
 
 
+
 class Triangle(object):
     """Single triangle representation."""
 
@@ -88,9 +89,12 @@ class TriangleSet(primitive.Primitive):
         if 'VERTEX' not in sources:
             raise DaeIncompleteError('Triangle set requires vertex input')
 
-        max_offset = max([max([input[0] for input in input_type_array])
-                          for input_type_array in sources.values()
-                          if len(input_type_array) > 0])
+        # find max offset - optimized version
+        max_offset = 0
+        for input_type_array in sources.values():
+            for inp in input_type_array:
+                if inp[0] > max_offset:
+                    max_offset = inp[0]
 
         self.material = material
         self.index = index
@@ -203,35 +207,37 @@ class TriangleSet(primitive.Primitive):
             indexnodes = node.findall(tags['p'])
             input_tag = tags['input']
         else:
-            indexnodes = node.findall(collada.tag('p'))
-            input_tag = collada.tag('input')
+            from collada.common import tag
+            indexnodes = node.findall(tag('p'))
+            input_tag = tag('input')
         if not indexnodes:
             raise DaeIncompleteError('Missing index in triangle set')
 
         source_array = primitive.Primitive._getInputs(collada, localscope, node.findall(input_tag))
-
-        def parse_p(indexnode):
-            if indexnode.text is None or indexnode.text.isspace():
-                index = numpy.array([], dtype=numpy.int32)
-            else:
-                try:
-                    index = numpy.fromstring(indexnode.text, dtype=numpy.int32, sep=' ')
-                except ValueError:
-                    raise DaeMalformedError("Failed to parse triangleset index ints")
-            index[numpy.isnan(index)] = 0
-            return index
 
         indexlist = []
         tag_bare = node.tag.split('}')[-1]
 
         extendfunc = _indexExtendFunctions[tag_bare]
 
-        max_offset = max(input[0] for input_type_array in source_array.values()
-                         for input in input_type_array)
+        # find max offset - optimized version
+        max_offset = 0
+        for input_type_array in source_array.values():
+            for inp in input_type_array:
+                if inp[0] > max_offset:
+                    max_offset = inp[0]
 
         try:
             for indexnode in indexnodes:
-                index = parse_p(indexnode)
+                text = indexnode.text
+                if text is None or text.isspace():
+                    index = numpy.array([], dtype=numpy.int32)
+                else:
+                    try:
+                        index = numpy.fromstring(text, dtype=numpy.int32, sep=' ')
+                    except ValueError:
+                        raise DaeMalformedError("Failed to parse triangleset index ints")
+                
                 if extendfunc is None:
                     break
 

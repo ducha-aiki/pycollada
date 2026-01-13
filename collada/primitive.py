@@ -77,46 +77,41 @@ class Primitive(DaeObject):
 
     @staticmethod
     def _getInputsFromList(collada, localscope, inputs):
-        # first let's save any of the source that are references to a dict
-        to_append = []
-        new_inputs = []
-        for input in inputs:
-            offset, semantic, source, set = input
+        # Initialize all_inputs with empty lists for known semantics
+        all_inputs = {
+            'VERTEX': [], 'NORMAL': [], 'TEXCOORD': [], 'TEXTANGENT': [],
+            'TEXBINORMAL': [], 'COLOR': [], 'TANGENT': [], 'BINORMAL': []
+        }
+        known = Primitive._KNOWN_SEMANTICS
+        
+        for offset, semantic, source, set_val in inputs:
             source_key = source[1:]
             vertex_source = localscope.get(source_key)
+            
             if semantic == 'VERTEX' and isinstance(vertex_source, dict):
+                # Expand vertex references
                 for inputsemantic, inputsource in vertex_source.items():
-                    if inputsemantic == 'POSITION':
-                        to_append.append([offset, 'VERTEX', '#' + inputsource.id, set])
-                    else:
-                        to_append.append([offset, inputsemantic, '#' + inputsource.id, set])
+                    new_semantic = 'VERTEX' if inputsemantic == 'POSITION' else inputsemantic
+                    new_source = '#' + inputsource.id
+                    input_tuple = (offset, new_semantic, new_source, set_val, inputsource)
+                    if new_semantic in known:
+                        all_inputs[new_semantic].append(input_tuple)
             elif not isinstance(vertex_source, dict):
-                new_inputs.append(input)
-
-        # Combine with dereferenced dicts
-        new_inputs.extend(to_append)
-
-        # Initialize all_inputs with empty lists for known semantics
-        all_inputs = {sem: [] for sem in Primitive._KNOWN_SEMANTICS}
-
-        for input in new_inputs:
-            offset, semantic, source, set = input
-            if len(source) < 2 or source[0] != '#':
-                raise DaeMalformedError('Incorrect source id "%s" in input' % source)
-            source_key = source[1:]
-            if source_key not in localscope:
-                raise DaeBrokenRefError('Source input id "%s" not found' % source)
-            input_tuple = (offset, semantic, source, set, localscope[source_key])
-            if semantic in Primitive._KNOWN_SEMANTICS:
-                all_inputs[semantic].append(input_tuple)
-            else:
-                try:
-                    raise DaeUnsupportedError('Unknown input semantic: %s' % semantic)
-                except DaeUnsupportedError as ex:
-                    collada.handleError(ex)
-                if semantic not in all_inputs:
-                    all_inputs[semantic] = []
-                all_inputs[semantic].append(input_tuple)
+                if len(source) < 2 or source[0] != '#':
+                    raise DaeMalformedError('Incorrect source id "%s" in input' % source)
+                if source_key not in localscope:
+                    raise DaeBrokenRefError('Source input id "%s" not found' % source)
+                input_tuple = (offset, semantic, source, set_val, localscope[source_key])
+                if semantic in known:
+                    all_inputs[semantic].append(input_tuple)
+                else:
+                    try:
+                        raise DaeUnsupportedError('Unknown input semantic: %s' % semantic)
+                    except DaeUnsupportedError as ex:
+                        collada.handleError(ex)
+                    if semantic not in all_inputs:
+                        all_inputs[semantic] = []
+                    all_inputs[semantic].append(input_tuple)
 
         return all_inputs
 
