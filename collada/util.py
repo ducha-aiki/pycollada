@@ -108,6 +108,91 @@ def dot_v3(arr1, arr2):
     return arr1[:, 0] * arr2[:, 0] + arr1[:, 1] * arr2[:, 1] + arr2[:, 2] * arr1[:, 2]
 
 
+class LazyIndexedList:
+    """
+    A lazy-loading indexed list that stores XML nodes and loads objects on demand.
+    This is useful for large COLLADA files where you may not need all objects.
+    """
+
+    def __init__(self, attrs, collada, loader_func, id_attr='id'):
+        self._attrs = tuple(attrs)
+        self._collada = collada
+        self._loader_func = loader_func
+        self._id_attr = id_attr
+        self._pending_nodes = {}  # id -> xmlnode
+        self._loaded = {}  # id -> loaded object
+        self._loaded_objects = set()  # fast O(1) containment check for objects
+        self._order = []  # maintain insertion order
+
+    def add_node(self, xmlnode):
+        """Add an XML node for lazy loading."""
+        obj_id = xmlnode.get(self._id_attr)
+        if obj_id:
+            self._pending_nodes[obj_id] = xmlnode
+            self._order.append(obj_id)
+
+    def _load_item(self, obj_id):
+        """Load and cache an item by id."""
+        if obj_id in self._loaded:
+            return self._loaded[obj_id]
+        if obj_id in self._pending_nodes:
+            node = self._pending_nodes.pop(obj_id)
+            obj = self._loader_func(self._collada, {}, node)
+            self._loaded[obj_id] = obj
+            self._loaded_objects.add(id(obj))  # Track by id for fast containment
+            return obj
+        return None
+
+    def _load_all(self):
+        """Load all pending items."""
+        for obj_id in list(self._pending_nodes.keys()):
+            self._load_item(obj_id)
+
+    def __getitem__(self, key):
+        if isinstance(key, str):
+            return self.get(key)
+        # Numeric index - need to load item at that position
+        if key < 0:
+            key = len(self) + key
+        if key < 0 or key >= len(self._order):
+            raise IndexError("list index out of range")
+        obj_id = self._order[key]
+        return self._load_item(obj_id)
+
+    def get(self, key, default=None):
+        if key in self._loaded:
+            return self._loaded[key]
+        if key in self._pending_nodes:
+            return self._load_item(key)
+        return default
+
+    def __len__(self):
+        return len(self._order)
+
+    def __iter__(self):
+        for obj_id in self._order:
+            yield self._load_item(obj_id)
+
+    def __contains__(self, item):
+        if isinstance(item, str):
+            return item in self._loaded or item in self._pending_nodes
+        # Fast O(1) check using object id
+        return id(item) in self._loaded_objects
+
+    def append(self, obj):
+        """Append an already-loaded object."""
+        for attr in self._attrs:
+            key = getattr(obj, attr)
+            self._loaded[key] = obj
+            self._loaded_objects.add(id(obj))
+            if key not in self._order:
+                self._order.append(key)
+
+    def extend(self, items):
+        for item in items:
+            self.append(item)
+
+
 class IndexedList(list):
     """
     Class that combines a list and a dict into a single class

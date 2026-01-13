@@ -37,7 +37,7 @@ from collada import scene
 from collada.common import E, tagger, tag
 from collada.common import DaeError, DaeIncompleteError, DaeBrokenRefError, \
     DaeMalformedError, DaeSaveValidationError
-from collada.util import IndexedList
+from collada.util import IndexedList, LazyIndexedList
 from collada.xmlutil import createElementTree
 from collada.xmlutil import etree as ElementTree
 from collada.xmlutil import writeXML
@@ -77,7 +77,8 @@ class Collada(object):
                  ignore=None,
                  aux_file_loader=None,
                  zip_filename=None,
-                 validate_output=False):
+                 validate_output=False,
+                 lazy=False):
         """Load collada data from filename or file like object.
 
         :param filename:
@@ -105,7 +106,14 @@ class Collada(object):
           If set to True, the XML written when calling :meth:`save` will be
           validated against the COLLADA 1.4.1 schema. If validation fails, the
           :class:`common.DaeSaveValidationError` exception will be thrown.
+        :param bool lazy:
+          If set to True, geometries, controllers, and animations will be
+          loaded lazily (on first access). Scene loading is also skipped.
+          This can significantly speed up initial loading for large files
+          when you only need to access a subset of the data. Use load_scenes()
+          to explicitly load scenes when needed.
         """
+        self._lazy = lazy
 
         self.errors = []
         """List of :class:`common.common.DaeError` objects representing errors encountered while loading collada file"""
@@ -235,9 +243,12 @@ class Collada(object):
         self._loadControllers()
         self._loadLights()
         self._loadCameras()
-        self._loadNodes()
-        self._loadScenes()
-        self._loadDefaultScene()
+        if not self._lazy:
+            # Scene loading triggers loading of all geometries/controllers
+            # Skip in lazy mode - user can call load_scenes() explicitly
+            self._loadNodes()
+            self._loadScenes()
+            self._loadDefaultScene()
 
     def _setIndexedList(self, propname, data):
         setattr(self, propname, IndexedList(data, ('id',)))
@@ -345,50 +356,88 @@ class Collada(object):
 
     def _loadGeometry(self):
         """Load geometry library."""
-        libnodes = self.xmlnode.findall(self.tag('library_geometries'))
-        if libnodes is not None:
-            for libnode in libnodes:
-                if libnode is not None:
-                    for geomnode in libnode.findall(self.tag('geometry')):
-                        if geomnode.find(self.tag('mesh')) is None:
-                            continue
-                        try:
-                            G = geometry.Geometry.load(self, {}, geomnode)
-                        except DaeError as ex:
-                            self.handleError(ex)
-                        else:
-                            self.geometries.append(G)
+        if self._lazy:
+            self._geometries = LazyIndexedList(
+                ('id',), self, geometry.Geometry.load, id_attr='id')
+            tag_mesh = self.tag('mesh')
+            libnodes = self.xmlnode.findall(self.tag('library_geometries'))
+            if libnodes is not None:
+                for libnode in libnodes:
+                    if libnode is not None:
+                        for geomnode in libnode.findall(self.tag('geometry')):
+                            if geomnode.find(tag_mesh) is None:
+                                continue
+                            self._geometries.add_node(geomnode)
+        else:
+            libnodes = self.xmlnode.findall(self.tag('library_geometries'))
+            if libnodes is not None:
+                for libnode in libnodes:
+                    if libnode is not None:
+                        for geomnode in libnode.findall(self.tag('geometry')):
+                            if geomnode.find(self.tag('mesh')) is None:
+                                continue
+                            try:
+                                G = geometry.Geometry.load(self, {}, geomnode)
+                            except DaeError as ex:
+                                self.handleError(ex)
+                            else:
+                                self.geometries.append(G)
 
     def _loadControllers(self):
         """Load controller library."""
-        libnodes = self.xmlnode.findall(self.tag('library_controllers'))
-        if libnodes is not None:
-            for libnode in libnodes:
-                if libnode is not None:
-                    for controlnode in libnode.findall(self.tag('controller')):
-                        if controlnode.find(self.tag('skin')) is None \
-                                and controlnode.find(self.tag('morph')) is None:
-                            continue
-                        try:
-                            C = controller.Controller.load(self, {}, controlnode)
-                        except DaeError as ex:
-                            self.handleError(ex)
-                        else:
-                            self.controllers.append(C)
+        if self._lazy:
+            self._controllers = LazyIndexedList(
+                ('id',), self, controller.Controller.load, id_attr='id')
+            tag_skin = self.tag('skin')
+            tag_morph = self.tag('morph')
+            libnodes = self.xmlnode.findall(self.tag('library_controllers'))
+            if libnodes is not None:
+                for libnode in libnodes:
+                    if libnode is not None:
+                        for controlnode in libnode.findall(self.tag('controller')):
+                            if controlnode.find(tag_skin) is None \
+                                    and controlnode.find(tag_morph) is None:
+                                continue
+                            self._controllers.add_node(controlnode)
+        else:
+            libnodes = self.xmlnode.findall(self.tag('library_controllers'))
+            if libnodes is not None:
+                for libnode in libnodes:
+                    if libnode is not None:
+                        for controlnode in libnode.findall(self.tag('controller')):
+                            if controlnode.find(self.tag('skin')) is None \
+                                    and controlnode.find(self.tag('morph')) is None:
+                                continue
+                            try:
+                                C = controller.Controller.load(self, {}, controlnode)
+                            except DaeError as ex:
+                                self.handleError(ex)
+                            else:
+                                self.controllers.append(C)
 
     def _loadAnimations(self):
         """Load animation library."""
-        libnodes = self.xmlnode.findall(self.tag('library_animations'))
-        if libnodes is not None:
-            for libnode in libnodes:
-                if libnode is not None:
-                    for animnode in libnode.findall(self.tag('animation')):
-                        try:
-                            A = animation.Animation.load(self, {}, animnode)
-                        except DaeError as ex:
-                            self.handleError(ex)
-                        else:
-                            self.animations.append(A)
+        if self._lazy:
+            self._animations = LazyIndexedList(
+                ('id',), self, animation.Animation.load, id_attr='id')
+            libnodes = self.xmlnode.findall(self.tag('library_animations'))
+            if libnodes is not None:
+                for libnode in libnodes:
+                    if libnode is not None:
+                        for animnode in libnode.findall(self.tag('animation')):
+                            self._animations.add_node(animnode)
+        else:
+            libnodes = self.xmlnode.findall(self.tag('library_animations'))
+            if libnodes is not None:
+                for libnode in libnodes:
+                    if libnode is not None:
+                        for animnode in libnode.findall(self.tag('animation')):
+                            try:
+                                A = animation.Animation.load(self, {}, animnode)
+                            except DaeError as ex:
+                                self.handleError(ex)
+                            else:
+                                self.animations.append(A)
 
     def _loadLights(self):
         """Load light library."""
@@ -524,6 +573,17 @@ class Collada(object):
                     raise DaeBrokenRefError('Default scene %s not found' % sceneid)
         except DaeError as ex:
             self.handleError(ex)
+
+    def load_scenes(self):
+        """Explicitly load scenes when in lazy mode.
+
+        In lazy mode, scenes are not loaded automatically because they
+        require loading all referenced geometries and controllers.
+        Call this method to load scenes after initial loading.
+        """
+        self._loadNodes()
+        self._loadScenes()
+        self._loadDefaultScene()
 
     def save(self):
         """Saves the collada document back to :attr:`xmlnode`"""
