@@ -162,11 +162,18 @@ class LineSet(primitive.Primitive):
 
     @staticmethod
     def load(collada, localscope, node):
-        indexnode = node.find(collada.tag('p'))
+        # Use pre-cached tags for efficiency
+        tags = getattr(collada, '_tags', None)
+        if tags:
+            indexnode = node.find(tags['p'])
+            input_tag = tags['input']
+        else:
+            indexnode = node.find(collada.tag('p'))
+            input_tag = collada.tag('input')
         if indexnode is None:
             raise DaeIncompleteError('Missing index in line set')
 
-        source_array = primitive.Primitive._getInputs(collada, localscope, node.findall(collada.tag('input')))
+        source_array = primitive.Primitive._getInputs(collada, localscope, node.findall(input_tag))
 
         try:
             if indexnode.text is None or indexnode.text.isspace():

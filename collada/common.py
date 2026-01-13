@@ -2,6 +2,9 @@ from collada.xmlutil import etree, ElementMaker, COLLADA_NS
 
 E = ElementMaker(namespace=COLLADA_NS, nsmap={None: COLLADA_NS})
 
+# Cache for tag strings - key is (namespace, text), value is the qualified tag string
+_tag_cache = {}
+
 
 def tag(text, namespace=None):
     """
@@ -16,7 +19,15 @@ def tag(text, namespace=None):
     """
     if namespace is None:
         namespace = COLLADA_NS
-    return str(etree.QName(namespace, text))
+    
+    cache_key = (namespace, text)
+    cached = _tag_cache.get(cache_key)
+    if cached is not None:
+        return cached
+    
+    result = '{%s}%s' % (namespace, text)
+    _tag_cache[cache_key] = result
+    return result
 
 
 def tagger(namespace=None):
@@ -30,8 +41,17 @@ def tagger(namespace=None):
     :return:
       tag() function
     """
+    # Create a local cache for this specific namespace
+    cache = {}
+    
     def tag(text):
-        return str(etree.QName(namespace, text))
+        cached = cache.get(text)
+        if cached is not None:
+            return cached
+        result = '{%s}%s' % (namespace, text)
+        cache[text] = result
+        return result
+    
     return tag
 
 

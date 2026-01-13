@@ -170,21 +170,52 @@ class Geometry(DaeObject):
     def load(collada, localscope, node):
         id = node.get("id") or ""
         name = node.get("name") or ""
-        meshnode = node.find(collada.tag('mesh'))
+        
+        # Use pre-cached tags for efficiency
+        tags = getattr(collada, '_tags', None)
+        if tags:
+            tag_mesh = tags['mesh']
+            tag_source = tags['source']
+            tag_vertices = tags['vertices']
+            tag_input = tags['input']
+            tag_extra = tags['extra']
+            tag_double_sided = tags['double_sided']
+            tag_polylist = tags['polylist']
+            tag_triangles = tags['triangles']
+            tag_lines = tags['lines']
+            tag_polygons = tags['polygons']
+            # These aren't in pre-cache, compute once
+            tag_tristrips = collada.tag('tristrips')
+            tag_trifans = collada.tag('trifans')
+        else:
+            tag_mesh = collada.tag('mesh')
+            tag_source = collada.tag('source')
+            tag_vertices = collada.tag('vertices')
+            tag_input = collada.tag('input')
+            tag_extra = collada.tag('extra')
+            tag_double_sided = collada.tag('double_sided')
+            tag_polylist = collada.tag('polylist')
+            tag_triangles = collada.tag('triangles')
+            tag_tristrips = collada.tag('tristrips')
+            tag_trifans = collada.tag('trifans')
+            tag_lines = collada.tag('lines')
+            tag_polygons = collada.tag('polygons')
+        
+        meshnode = node.find(tag_mesh)
         if meshnode is None:
             raise DaeUnsupportedError('Unknown geometry node')
         sourcebyid = {}
         sources = []
-        sourcenodes = node.findall('%s/%s' % (collada.tag('mesh'), collada.tag('source')))
+        sourcenodes = node.findall('%s/%s' % (tag_mesh, tag_source))
         for sourcenode in sourcenodes:
             ch = source.Source.load(collada, {}, sourcenode)
             sources.append(ch)
             sourcebyid[ch.id] = ch
 
-        verticesnode = meshnode.find(collada.tag('vertices'))
+        verticesnode = meshnode.find(tag_vertices)
         if verticesnode is not None:
             inputnodes = {}
-            for inputnode in verticesnode.findall(collada.tag('input')):
+            for inputnode in verticesnode.findall(tag_input):
                 semantic = inputnode.get('semantic')
                 inputsource = inputnode.get('source')
                 if not semantic or not inputsource or not inputsource.startswith('#'):
@@ -196,7 +227,7 @@ class Geometry(DaeObject):
             sourcebyid[verticesnode.get('id')] = inputnodes
             verticesnode.get('id')
 
-        double_sided_node = node.find('.//%s//%s' % (collada.tag('extra'), collada.tag('double_sided')))
+        double_sided_node = node.find('.//%s//%s' % (tag_extra, tag_double_sided))
         double_sided = False
         if double_sided_node is not None and double_sided_node.text is not None:
             try:
@@ -207,16 +238,18 @@ class Geometry(DaeObject):
                 pass
 
         _primitives = []
+        tri_tags = (tag_triangles, tag_tristrips, tag_trifans)
+        
         for subnode in meshnode:
-            if subnode.tag == collada.tag('polylist'):
+            if subnode.tag == tag_polylist:
                 _primitives.append(polylist.Polylist.load(collada, sourcebyid, subnode))
-            elif subnode.tag in (collada.tag('triangles'), collada.tag('tristrips'), collada.tag('trifans')):
+            elif subnode.tag in tri_tags:
                 _primitives.append(triangleset.TriangleSet.load(collada, sourcebyid, subnode))
-            elif subnode.tag == collada.tag('lines'):
+            elif subnode.tag == tag_lines:
                 _primitives.append(lineset.LineSet.load(collada, sourcebyid, subnode))
-            elif subnode.tag == collada.tag('polygons'):
+            elif subnode.tag == tag_polygons:
                 _primitives.append(polygons.Polygons.load(collada, sourcebyid, subnode))
-            elif subnode.tag != collada.tag('source') and subnode.tag != collada.tag('vertices') and subnode.tag != collada.tag('extra'):
+            elif subnode.tag != tag_source and subnode.tag != tag_vertices and subnode.tag != tag_extra:
                 raise DaeUnsupportedError('Unknown geometry tag %s' % subnode.tag)
         geom = Geometry(collada, id, name, sourcebyid, _primitives, xmlnode=node, double_sided=double_sided)
         return geom
