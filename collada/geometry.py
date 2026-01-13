@@ -170,7 +170,7 @@ class Geometry(DaeObject):
     def load(collada, localscope, node):
         id = node.get("id") or ""
         name = node.get("name") or ""
-        
+
         # Use pre-cached tags for efficiency
         tags = getattr(collada, '_tags', None)
         if tags:
@@ -200,7 +200,7 @@ class Geometry(DaeObject):
             tag_trifans = collada.tag('trifans')
             tag_lines = collada.tag('lines')
             tag_polygons = collada.tag('polygons')
-        
+
         meshnode = node.find(tag_mesh)
         if meshnode is None:
             raise DaeUnsupportedError('Unknown geometry node')
@@ -239,7 +239,7 @@ class Geometry(DaeObject):
 
         _primitives = []
         tri_tags = (tag_triangles, tag_tristrips, tag_trifans)
-        
+
         for subnode in meshnode:
             if subnode.tag == tag_polylist:
                 _primitives.append(polylist.Polylist.load(collada, sourcebyid, subnode))

@@ -71,8 +71,9 @@ class Primitive(DaeObject):
         """
 
     # Known semantic types for fast lookup
-    _KNOWN_SEMANTICS = frozenset(['VERTEX', 'NORMAL', 'TEXCOORD', 'TEXTANGENT', 
-                                   'TEXBINORMAL', 'COLOR', 'TANGENT', 'BINORMAL'])
+    _KNOWN_SEMANTICS = frozenset([
+        'VERTEX', 'NORMAL', 'TEXCOORD', 'TEXTANGENT',
+        'TEXBINORMAL', 'COLOR', 'TANGENT', 'BINORMAL'])
 
     @staticmethod
     def _getInputsFromList(collada, localscope, inputs):
@@ -91,7 +92,7 @@ class Primitive(DaeObject):
                         to_append.append([offset, inputsemantic, '#' + inputsource.id, set])
             elif not isinstance(vertex_source, dict):
                 new_inputs.append(input)
-        
+
         # Combine with dereferenced dicts
         new_inputs.extend(to_append)
 

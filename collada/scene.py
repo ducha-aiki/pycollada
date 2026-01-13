@@ -367,7 +367,7 @@ class Node(SceneNode):
             self.transforms = transforms
         """A list of transformations effecting the node. This can
           contain any object that inherits from :class:`collada.scene.Transform`"""
-        
+
         # Use cached identity matrix when no transforms, otherwise compute the combined matrix
         if len(self.transforms) == 0:
             self.matrix = _IDENTITY_MATRIX
@@ -922,7 +922,7 @@ def loadNode(collada, node, localscope):
             tag_func('asset'): ('none', None),
         }
         collada._node_dispatch = dispatch
-    
+
     entry = dispatch.get(node.tag)
     if entry is not None:
         load_type, loader_class = entry

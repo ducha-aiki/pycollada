@@ -1,4 +1,4 @@
-from collada.xmlutil import etree, ElementMaker, COLLADA_NS
+from collada.xmlutil import ElementMaker, COLLADA_NS
 
 E = ElementMaker(namespace=COLLADA_NS, nsmap={None: COLLADA_NS})
 
@@ -19,12 +19,12 @@ def tag(text, namespace=None):
     """
     if namespace is None:
         namespace = COLLADA_NS
-    
+
     cache_key = (namespace, text)
     cached = _tag_cache.get(cache_key)
     if cached is not None:
         return cached
-    
+
     result = '{%s}%s' % (namespace, text)
     _tag_cache[cache_key] = result
     return result
@@ -43,7 +43,7 @@ def tagger(namespace=None):
     """
     # Create a local cache for this specific namespace
     cache = {}
-    
+
     def tag(text):
         cached = cache.get(text)
         if cached is not None:
@@ -51,7 +51,7 @@ def tagger(namespace=None):
         result = '{%s}%s' % (namespace, text)
         cache[text] = result
         return result
-    
+
     return tag
 
 
