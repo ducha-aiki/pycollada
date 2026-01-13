@@ -17,13 +17,6 @@ import numpy
 from collada.common import DaeObject, E, tag
 from collada.common import DaeIncompleteError, DaeMalformedError, DaeUnsupportedError
 
-# Try to import fast Cython parsing functions
-try:
-    from collada._source_cy import parse_float_array_fast, parse_int_array_fast
-    _HAVE_CYTHON = True
-except ImportError:
-    _HAVE_CYTHON = False
-
 
 class InputList(object):
     """Used for defining input sources to a geometry."""
@@ -222,15 +215,7 @@ class FloatSource(Source):
             data = numpy.array([], dtype=numpy.float32)
         else:
             try:
-                if _HAVE_CYTHON:
-                    count_str = arraynode.get('count')
-                    count = int(count_str) if count_str else -1
-                    if count > 0:
-                        data = parse_float_array_fast(text, count)
-                    else:
-                        data = numpy.fromstring(text, dtype=numpy.float32, sep=' ')
-                else:
-                    data = numpy.fromstring(text, dtype=numpy.float32, sep=' ')
+                data = numpy.fromstring(text, dtype=numpy.float32, sep=' ')
             except ValueError:
                 raise DaeMalformedError('Corrupted float array')
 
