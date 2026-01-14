@@ -197,14 +197,8 @@ class TriangleSet(primitive.Primitive):
 
     @staticmethod
     def load(collada, localscope, node):
-        # Use pre-cached tags for efficiency
-        tags = getattr(collada, '_tags', None)
-        if tags:
-            indexnodes = node.findall(tags['p'])
-            input_tag = tags['input']
-        else:
-            indexnodes = node.findall(collada.tag('p'))
-            input_tag = collada.tag('input')
+        indexnodes = node.findall(collada.tag('p'))
+        input_tag = collada.tag('input')
         if not indexnodes:
             raise DaeIncompleteError('Missing index in triangle set')
 

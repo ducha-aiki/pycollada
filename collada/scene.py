@@ -573,10 +573,7 @@ class GeometryNode(SceneNode):
         geometry = collada.geometries.get(url[1:])
         if not geometry:
             raise DaeBrokenRefError('Geometry %s not found in library' % url)
-        # Use pre-cached XPath for materials
-        mat_xpath = getattr(collada, '_xpath_materials', None)
-        if mat_xpath is None:
-            mat_xpath = '%s/%s/%s' % (collada.tag('bind_material'), collada.tag('technique_common'), collada.tag('instance_material'))
+        mat_xpath = '%s/%s/%s' % (collada.tag('bind_material'), collada.tag('technique_common'), collada.tag('instance_material'))
         matnodes = node.findall(mat_xpath)
         materials = []
         for matnode in matnodes:
@@ -669,10 +666,7 @@ class ControllerNode(SceneNode):
         controller = collada.controllers.get(url[1:])
         if not controller:
             raise DaeBrokenRefError('Controller %s not found in library' % url)
-        # Use pre-cached XPath for materials
-        mat_xpath = getattr(collada, '_xpath_materials', None)
-        if mat_xpath is None:
-            mat_xpath = '%s/%s/%s' % (collada.tag('bind_material'), collada.tag('technique_common'), collada.tag('instance_material'))
+        mat_xpath = '%s/%s/%s' % (collada.tag('bind_material'), collada.tag('technique_common'), collada.tag('instance_material'))
         matnodes = node.findall(mat_xpath)
         materials = []
         for matnode in matnodes:

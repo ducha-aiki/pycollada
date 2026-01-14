@@ -171,35 +171,18 @@ class Geometry(DaeObject):
         id = node.get("id") or ""
         name = node.get("name") or ""
 
-        # Use pre-cached tags for efficiency
-        tags = getattr(collada, '_tags', None)
-        if tags:
-            tag_mesh = tags['mesh']
-            tag_source = tags['source']
-            tag_vertices = tags['vertices']
-            tag_input = tags['input']
-            tag_extra = tags['extra']
-            tag_double_sided = tags['double_sided']
-            tag_polylist = tags['polylist']
-            tag_triangles = tags['triangles']
-            tag_lines = tags['lines']
-            tag_polygons = tags['polygons']
-            # These aren't in pre-cache, compute once
-            tag_tristrips = collada.tag('tristrips')
-            tag_trifans = collada.tag('trifans')
-        else:
-            tag_mesh = collada.tag('mesh')
-            tag_source = collada.tag('source')
-            tag_vertices = collada.tag('vertices')
-            tag_input = collada.tag('input')
-            tag_extra = collada.tag('extra')
-            tag_double_sided = collada.tag('double_sided')
-            tag_polylist = collada.tag('polylist')
-            tag_triangles = collada.tag('triangles')
-            tag_tristrips = collada.tag('tristrips')
-            tag_trifans = collada.tag('trifans')
-            tag_lines = collada.tag('lines')
-            tag_polygons = collada.tag('polygons')
+        tag_mesh = collada.tag('mesh')
+        tag_source = collada.tag('source')
+        tag_vertices = collada.tag('vertices')
+        tag_input = collada.tag('input')
+        tag_extra = collada.tag('extra')
+        tag_double_sided = collada.tag('double_sided')
+        tag_polylist = collada.tag('polylist')
+        tag_triangles = collada.tag('triangles')
+        tag_tristrips = collada.tag('tristrips')
+        tag_trifans = collada.tag('trifans')
+        tag_lines = collada.tag('lines')
+        tag_polygons = collada.tag('polygons')
 
         meshnode = node.find(tag_mesh)
         if meshnode is None:

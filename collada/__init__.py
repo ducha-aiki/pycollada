@@ -222,9 +222,6 @@ class Collada(object):
             # failed to extract a namespace, using default
             traceback.print_exc()
 
-        # Pre-cache commonly used tags and XPath patterns for better performance
-        self._precache_tags()
-
         # functions which will load various things into collada object
         self._loadAssetInfo()
         self._loadImages()
@@ -241,45 +238,6 @@ class Collada(object):
 
     def _setIndexedList(self, propname, data):
         setattr(self, propname, IndexedList(data, ('id',)))
-
-    def _precache_tags(self):
-        """Pre-cache commonly used tags and XPath patterns for better performance."""
-        t = self.tag
-        # Pre-cache individual tags
-        self._tags = {
-            'float_array': t('float_array'),
-            'IDREF_array': t('IDREF_array'),
-            'Name_array': t('Name_array'),
-            'technique_common': t('technique_common'),
-            'accessor': t('accessor'),
-            'param': t('param'),
-            'mesh': t('mesh'),
-            'source': t('source'),
-            'vertices': t('vertices'),
-            'input': t('input'),
-            'extra': t('extra'),
-            'double_sided': t('double_sided'),
-            'polylist': t('polylist'),
-            'triangles': t('triangles'),
-            'tristrips': t('tristrips'),
-            'trifans': t('trifans'),
-            'lines': t('lines'),
-            'polygons': t('polygons'),
-            'p': t('p'),
-            'vcount': t('vcount'),
-            'bind_material': t('bind_material'),
-            'instance_material': t('instance_material'),
-            'bind_vertex_input': t('bind_vertex_input'),
-            'node': t('node'),
-        }
-        # Pre-cache common XPath patterns
-        tc = self._tags['technique_common']
-        acc = self._tags['accessor']
-        param = self._tags['param']
-        self._xpath_accessor_params = '%s/%s/%s' % (tc, acc, param)
-        bm = self._tags['bind_material']
-        im = self._tags['instance_material']
-        self._xpath_materials = '%s/%s/%s' % (bm, tc, im)
 
     def handleError(self, error):
         self.errors.append(error)

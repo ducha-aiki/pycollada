@@ -84,29 +84,15 @@ class Source(DaeObject):
     @staticmethod
     def load(collada, localscope, node):
         sourceid = node.get('id')
-        # Use pre-cached tags for efficiency
-        tags = getattr(collada, '_tags', None)
-        if tags:
-            arraynode = node.find(tags['float_array'])
-            if arraynode is not None:
-                return FloatSource.load(collada, localscope, node)
-            arraynode = node.find(tags['IDREF_array'])
-            if arraynode is not None:
-                return IDRefSource.load(collada, localscope, node)
-            arraynode = node.find(tags['Name_array'])
-            if arraynode is not None:
-                return NameSource.load(collada, localscope, node)
-        else:
-            # Fallback for when tags aren't pre-cached
-            arraynode = node.find(collada.tag('float_array'))
-            if arraynode is not None:
-                return FloatSource.load(collada, localscope, node)
-            arraynode = node.find(collada.tag('IDREF_array'))
-            if arraynode is not None:
-                return IDRefSource.load(collada, localscope, node)
-            arraynode = node.find(collada.tag('Name_array'))
-            if arraynode is not None:
-                return NameSource.load(collada, localscope, node)
+        arraynode = node.find(collada.tag('float_array'))
+        if arraynode is not None:
+            return FloatSource.load(collada, localscope, node)
+        arraynode = node.find(collada.tag('IDREF_array'))
+        if arraynode is not None:
+            return IDRefSource.load(collada, localscope, node)
+        arraynode = node.find(collada.tag('Name_array'))
+        if arraynode is not None:
+            return NameSource.load(collada, localscope, node)
 
         if arraynode is None:
             raise DaeIncompleteError('No array found in source %s' % sourceid)
@@ -203,12 +189,7 @@ class FloatSource(Source):
     @staticmethod
     def load(collada, localscope, node):
         sourceid = node.get('id')
-        # Use pre-cached tags for efficiency
-        tags = getattr(collada, '_tags', None)
-        if tags:
-            arraynode = node.find(tags['float_array'])
-        else:
-            arraynode = node.find(collada.tag('float_array'))
+        arraynode = node.find(collada.tag('float_array'))
         if arraynode is None:
             raise DaeIncompleteError('No float_array in source node')
         if arraynode.text is None or arraynode.text.isspace():
@@ -221,10 +202,7 @@ class FloatSource(Source):
         # Replace NaN values with 0
         data[numpy.isnan(data)] = 0
 
-        # Use pre-cached XPath for accessor params
-        accessor_path = getattr(collada, '_xpath_accessor_params', None)
-        if accessor_path is None:
-            accessor_path = '%s/%s/%s' % (collada.tag('technique_common'), collada.tag('accessor'), collada.tag('param'))
+        accessor_path = '%s/%s/%s' % (collada.tag('technique_common'), collada.tag('accessor'), collada.tag('param'))
         paramnodes = node.findall(accessor_path)
         if not paramnodes:
             raise DaeIncompleteError('No accessor info in source node')

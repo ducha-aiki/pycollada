@@ -162,14 +162,8 @@ class LineSet(primitive.Primitive):
 
     @staticmethod
     def load(collada, localscope, node):
-        # Use pre-cached tags for efficiency
-        tags = getattr(collada, '_tags', None)
-        if tags:
-            indexnode = node.find(tags['p'])
-            input_tag = tags['input']
-        else:
-            indexnode = node.find(collada.tag('p'))
-            input_tag = collada.tag('input')
+        indexnode = node.find(collada.tag('p'))
+        input_tag = collada.tag('input')
         if indexnode is None:
             raise DaeIncompleteError('Missing index in line set')
 

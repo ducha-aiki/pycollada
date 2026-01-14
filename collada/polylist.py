@@ -263,16 +263,9 @@ class Polylist(primitive.Primitive):
 
     @staticmethod
     def load(collada, localscope, node):
-        # Use pre-cached tags for efficiency
-        tags = getattr(collada, '_tags', None)
-        if tags:
-            indexnode = node.find(tags['p'])
-            vcountnode = node.find(tags['vcount'])
-            input_tag = tags['input']
-        else:
-            indexnode = node.find(collada.tag('p'))
-            vcountnode = node.find(collada.tag('vcount'))
-            input_tag = collada.tag('input')
+        indexnode = node.find(collada.tag('p'))
+        vcountnode = node.find(collada.tag('vcount'))
+        input_tag = collada.tag('input')
         if indexnode is None:
             raise DaeIncompleteError('Missing index in polylist')
         if vcountnode is None:
