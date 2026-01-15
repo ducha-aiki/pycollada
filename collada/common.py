@@ -1,8 +1,11 @@
-from collada.xmlutil import etree, ElementMaker, COLLADA_NS
+from functools import cache
+
+from collada.xmlutil import ElementMaker, COLLADA_NS
 
 E = ElementMaker(namespace=COLLADA_NS, nsmap={None: COLLADA_NS})
 
 
+@cache
 def tag(text, namespace=None):
     """
     Tag a text key with the collada namespace, by default:
@@ -16,7 +19,7 @@ def tag(text, namespace=None):
     """
     if namespace is None:
         namespace = COLLADA_NS
-    return str(etree.QName(namespace, text))
+    return '{%s}%s' % (namespace, text)
 
 
 def tagger(namespace=None):
@@ -30,8 +33,10 @@ def tagger(namespace=None):
     :return:
       tag() function
     """
+    @cache
     def tag(text):
-        return str(etree.QName(namespace, text))
+        return '{%s}%s' % (namespace, text)
+
     return tag
 
 

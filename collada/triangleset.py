@@ -198,10 +198,11 @@ class TriangleSet(primitive.Primitive):
     @staticmethod
     def load(collada, localscope, node):
         indexnodes = node.findall(collada.tag('p'))
+        input_tag = collada.tag('input')
         if not indexnodes:
             raise DaeIncompleteError('Missing index in triangle set')
 
-        source_array = primitive.Primitive._getInputs(collada, localscope, node.findall(collada.tag('input')))
+        source_array = primitive.Primitive._getInputs(collada, localscope, node.findall(input_tag))
 
         def parse_p(indexnode):
             if indexnode.text is None or indexnode.text.isspace():

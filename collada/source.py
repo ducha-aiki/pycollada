@@ -87,11 +87,9 @@ class Source(DaeObject):
         arraynode = node.find(collada.tag('float_array'))
         if arraynode is not None:
             return FloatSource.load(collada, localscope, node)
-
         arraynode = node.find(collada.tag('IDREF_array'))
         if arraynode is not None:
             return IDRefSource.load(collada, localscope, node)
-
         arraynode = node.find(collada.tag('Name_array'))
         if arraynode is not None:
             return NameSource.load(collada, localscope, node)
@@ -201,9 +199,11 @@ class FloatSource(Source):
                 data = numpy.fromstring(arraynode.text, dtype=numpy.float32, sep=' ')
             except ValueError:
                 raise DaeMalformedError('Corrupted float array')
+        # Replace NaN values with 0
         data[numpy.isnan(data)] = 0
 
-        paramnodes = node.findall('%s/%s/%s' % (collada.tag('technique_common'), collada.tag('accessor'), collada.tag('param')))
+        accessor_path = '%s/%s/%s' % (collada.tag('technique_common'), collada.tag('accessor'), collada.tag('param'))
+        paramnodes = node.findall(accessor_path)
         if not paramnodes:
             raise DaeIncompleteError('No accessor info in source node')
         components = [param.get('name') for param in paramnodes]

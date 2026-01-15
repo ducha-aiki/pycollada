@@ -70,80 +70,53 @@ class Primitive(DaeObject):
 
         """
 
+    # Known semantic types for fast lookup
+    _KNOWN_SEMANTICS = frozenset([
+        'VERTEX', 'NORMAL', 'TEXCOORD', 'TEXTANGENT',
+        'TEXBINORMAL', 'COLOR', 'TANGENT', 'BINORMAL'])
+
     @staticmethod
     def _getInputsFromList(collada, localscope, inputs):
         # first let's save any of the source that are references to a dict
         to_append = []
+        new_inputs = []
         for input in inputs:
             offset, semantic, source, set = input
-            if semantic == 'VERTEX':
-                vertex_source = localscope.get(source[1:])
-                if isinstance(vertex_source, dict):
-                    for inputsemantic, inputsource in vertex_source.items():
-                        if inputsemantic == 'POSITION':
-                            to_append.append([offset, 'VERTEX', '#' + inputsource.id, set])
-                        else:
-                            to_append.append([offset, inputsemantic, '#' + inputsource.id, set])
+            source_key = source[1:]
+            vertex_source = localscope.get(source_key)
+            if semantic == 'VERTEX' and isinstance(vertex_source, dict):
+                for inputsemantic, inputsource in vertex_source.items():
+                    if inputsemantic == 'POSITION':
+                        to_append.append([offset, 'VERTEX', '#' + inputsource.id, set])
+                    else:
+                        to_append.append([offset, inputsemantic, '#' + inputsource.id, set])
+            elif not isinstance(vertex_source, dict):
+                new_inputs.append(input)
 
-        # remove all the dicts
-        inputs[:] = [input for input in inputs
-                     if not isinstance(localscope.get(input[2][1:]), dict)]
+        # Combine with dereferenced dicts
+        new_inputs.extend(to_append)
 
-        # append the dereferenced dicts
-        for a in to_append:
-            inputs.append(a)
+        # Initialize all_inputs with empty lists for known semantics
+        all_inputs = {sem: [] for sem in Primitive._KNOWN_SEMANTICS}
 
-        vertex_inputs = []
-        normal_inputs = []
-        texcoord_inputs = []
-        textangent_inputs = []
-        texbinormal_inputs = []
-        color_inputs = []
-        tangent_inputs = []
-        binormal_inputs = []
-
-        all_inputs = {}
-
-        for input in inputs:
+        for input in new_inputs:
             offset, semantic, source, set = input
             if len(source) < 2 or source[0] != '#':
                 raise DaeMalformedError('Incorrect source id "%s" in input' % source)
-            if source[1:] not in localscope:
+            source_key = source[1:]
+            if source_key not in localscope:
                 raise DaeBrokenRefError('Source input id "%s" not found' % source)
-            input = (input[0], input[1], input[2], input[3], localscope[source[1:]])
-            if semantic == 'VERTEX':
-                vertex_inputs.append(input)
-            elif semantic == 'NORMAL':
-                normal_inputs.append(input)
-            elif semantic == 'TEXCOORD':
-                texcoord_inputs.append(input)
-            elif semantic == 'TEXTANGENT':
-                textangent_inputs.append(input)
-            elif semantic == 'TEXBINORMAL':
-                texbinormal_inputs.append(input)
-            elif semantic == 'COLOR':
-                color_inputs.append(input)
-            elif semantic == 'TANGENT':
-                tangent_inputs.append(input)
-            elif semantic == 'BINORMAL':
-                binormal_inputs.append(input)
+            input_tuple = (offset, semantic, source, set, localscope[source_key])
+            if semantic in Primitive._KNOWN_SEMANTICS:
+                all_inputs[semantic].append(input_tuple)
             else:
                 try:
                     raise DaeUnsupportedError('Unknown input semantic: %s' % semantic)
                 except DaeUnsupportedError as ex:
                     collada.handleError(ex)
-                unknown_input = all_inputs.get(semantic, [])
-                unknown_input.append(input)
-                all_inputs[semantic] = unknown_input
-
-        all_inputs['VERTEX'] = vertex_inputs
-        all_inputs['NORMAL'] = normal_inputs
-        all_inputs['TEXCOORD'] = texcoord_inputs
-        all_inputs['TEXBINORMAL'] = texbinormal_inputs
-        all_inputs['TEXTANGENT'] = textangent_inputs
-        all_inputs['COLOR'] = color_inputs
-        all_inputs['TANGENT'] = tangent_inputs
-        all_inputs['BINORMAL'] = binormal_inputs
+                if semantic not in all_inputs:
+                    all_inputs[semantic] = []
+                all_inputs[semantic].append(input_tuple)
 
         return all_inputs
 
