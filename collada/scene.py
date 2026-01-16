@@ -448,7 +448,7 @@ class Node(SceneNode):
         name = node.get('name')
         children = []
         transforms = []
-        
+
         # Get or build dispatch table (same as loadNode uses)
         dispatch = getattr(collada, '_node_dispatch', None)
         if dispatch is None:
@@ -474,17 +474,17 @@ class Node(SceneNode):
             if entry is None:
                 collada.handleError(DaeUnsupportedError('Unknown scene node %s' % str(subnode.tag)))
                 continue
-            
+
             load_type, loader_class, is_transform = entry
             if load_type == 'none':
                 continue
-            
+
             try:
                 if load_type == 'node':
                     n = loader_class.load(collada, subnode, localscope)
                 else:
                     n = loader_class.load(collada, subnode)
-                
+
                 if n is not None:
                     if is_transform:
                         transforms.append(n)

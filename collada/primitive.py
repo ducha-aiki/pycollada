@@ -80,12 +80,12 @@ class Primitive(DaeObject):
         # Build result dict - only create lists as needed
         all_inputs = {}
         known_semantics = Primitive._KNOWN_SEMANTICS
-        
+
         for input in inputs:
             offset, semantic, source, set = input
             source_key = source[1:]
             vertex_source = localscope.get(source_key)
-            
+
             # Handle VERTEX semantic referencing a dict of sources
             if semantic == 'VERTEX' and isinstance(vertex_source, dict):
                 for inputsemantic, inputsource in vertex_source.items():
