@@ -582,15 +582,14 @@ class Effect(DaeObject):
                 params.append(param)
                 localscope[param.id] = param
             else:
-                floatnode = paramnode.find(collada.tag('float'))
-                if floatnode is None:
-                    floatnode = paramnode.find(collada.tag('float2'))
-                if floatnode is None:
-                    floatnode = paramnode.find(collada.tag('float3'))
-                if floatnode is None:
-                    floatnode = paramnode.find(collada.tag('float4'))
+                # Try float variants in order
+                floatnode = None
+                for float_type in ('float', 'float2', 'float3', 'float4'):
+                    floatnode = paramnode.find(collada.tag(float_type))
+                    if floatnode is not None:
+                        break
                 paramid = paramnode.get('sid')
-                if floatnode is not None and paramid is not None and len(paramid) > 0 and floatnode.text is not None:
+                if floatnode is not None and paramid and floatnode.text is not None:
                     localscope[paramid] = [float(v) for v in floatnode.text.split()]
 
     @staticmethod
@@ -687,7 +686,7 @@ class Effect(DaeObject):
         vnode = children[0]
         if vnode.tag == collada.tag('color'):
             try:
-                value = tuple([float(v) for v in vnode.text.split()])
+                value = tuple(float(v) for v in vnode.text.split())
             except ValueError:
                 raise DaeMalformedError('Corrupted color definition in effect `{}`'.format(id))
             except IndexError:
