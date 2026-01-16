@@ -661,13 +661,13 @@ class Effect(DaeObject):
                         props['opaque_mode'] = OPAQUE_MODE.RGB_ZERO
         props['xmlnode'] = node
 
-        bumpnode = node.find('.//%s//%s' % (collada.tag('extra'), collada.tag('texture')))
+        bumpnode = node.find(f".//{collada.tag('extra')}//{collada.tag('texture')}")
         if bumpnode is not None:
             bumpmap = Map.load(collada, localscope, bumpnode)
         else:
             bumpmap = None
 
-        double_sided_node = node.find('.//%s//%s' % (collada.tag('extra'), collada.tag('double_sided')))
+        double_sided_node = node.find(f".//{collada.tag('extra')}//{collada.tag('double_sided')}")
         double_sided = False
         if double_sided_node is not None and double_sided_node.text is not None:
             try:
@@ -780,7 +780,7 @@ class Effect(DaeObject):
                 if value is not None:
                     shadnode.append(getPropNode(prop, value))
 
-        double_sided_node = profilenode.find('.//%s//%s' % (tag('extra'), tag('double_sided')))
+        double_sided_node = profilenode.find(f".//{tag('extra')}//{tag('double_sided')}")
         if double_sided_node is None or double_sided_node.text is None:
             extranode = profilenode.find(tag('extra'))
             if extranode is None:

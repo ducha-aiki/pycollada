@@ -40,7 +40,7 @@ class Controller(DaeObject):
 
         sourcebyid = {}
         sources = []
-        sourcenodes = node.findall('%s/%s' % (controller.tag, collada.tag('source')))
+        sourcenodes = node.findall(f"{controller.tag}/{collada.tag('source')}")
         for sourcenode in sourcenodes:
             ch = source.Source.load(collada, {}, sourcenode)
             sources.append(ch)
@@ -200,7 +200,7 @@ class Skin(Controller):
                 raise DaeMalformedError('Corrupted bind shape matrix in skin')
             bind_shape_mat = numpy.array(values, dtype=numpy.float32)
 
-        inputnodes = skinnode.findall('%s/%s' % (collada.tag('joints'), collada.tag('input')))
+        inputnodes = skinnode.findall(f"{collada.tag('joints')}/{collada.tag('input')}")
         if inputnodes is None or len(inputnodes) < 2:
             raise DaeIncompleteError("Not enough inputs in skin joints")
 
@@ -358,7 +358,7 @@ class Morph(Controller):
         if not (method == 'NORMALIZED' or method == 'RELATIVE'):
             raise DaeMalformedError("Morph method must be either NORMALIZED or RELATIVE. Found '%s'" % method)
 
-        inputnodes = morphnode.findall('%s/%s' % (collada.tag('targets'), collada.tag('input')))
+        inputnodes = morphnode.findall(f"{collada.tag('targets')}/{collada.tag('input')}")
         if inputnodes is None or len(inputnodes) < 2:
             raise DaeIncompleteError("Not enough inputs in a morph")
 

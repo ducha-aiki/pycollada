@@ -177,7 +177,7 @@ class FloatSource(Source):
         node.text = txtdata
         node.set('count', str(rawlen))
         node.set('id', self.id + '-array')
-        node = self.xmlnode.find('%s/%s' % (tag('technique_common'), tag('accessor')))
+        node = self.xmlnode.find(f"{tag('technique_common')}/{tag('accessor')}")
         node.clear()
         node.set('count', str(acclen))
         node.set('source', '#' + self.id + '-array')
@@ -202,7 +202,7 @@ class FloatSource(Source):
         # Replace NaN values with 0
         data[numpy.isnan(data)] = 0
 
-        accessor_path = '%s/%s/%s' % (collada.tag('technique_common'), collada.tag('accessor'), collada.tag('param'))
+        accessor_path = f"{collada.tag('technique_common')}/{collada.tag('accessor')}/{collada.tag('param')}"
         paramnodes = node.findall(accessor_path)
         if not paramnodes:
             raise DaeIncompleteError('No accessor info in source node')
@@ -296,7 +296,7 @@ class IDRefSource(Source):
         node.text = txtdata
         node.set('count', str(rawlen))
         node.set('id', self.id + '-array')
-        node = self.xmlnode.find('%s/%s' % (tag('technique_common'), tag('accessor')))
+        node = self.xmlnode.find(f"{tag('technique_common')}/{tag('accessor')}")
         node.clear()
         node.set('count', str(acclen))
         node.set('source', '#' + self.id + '-array')
@@ -319,7 +319,7 @@ class IDRefSource(Source):
             except ValueError:
                 raise DaeMalformedError('Corrupted IDREF array')
         data = numpy.array(values, dtype=numpy.str_)
-        paramnodes = node.findall('%s/%s/%s' % (collada.tag('technique_common'), collada.tag('accessor'), collada.tag('param')))
+        paramnodes = node.findall(f"{collada.tag('technique_common')}/{collada.tag('accessor')}/{collada.tag('param')}")
         if not paramnodes:
             raise DaeIncompleteError('No accessor info in source node')
         components = [param.get('name') for param in paramnodes]
@@ -403,7 +403,7 @@ class NameSource(Source):
         node.text = txtdata
         node.set('count', str(rawlen))
         node.set('id', self.id + '-array')
-        node = self.xmlnode.find('%s/%s' % (tag('technique_common'), tag('accessor')))
+        node = self.xmlnode.find(f"{tag('technique_common')}/{tag('accessor')}")
         node.clear()
         node.set('count', str(acclen))
         node.set('source', '#' + self.id + '-array')
@@ -426,8 +426,7 @@ class NameSource(Source):
             except ValueError:
                 raise DaeMalformedError('Corrupted Name array')
         data = numpy.array(values, dtype=numpy.str_)
-        paramnodes = node.findall('%s/%s/%s' % (tag('technique_common'), tag('accessor'), tag
-                                                ('param')))
+        paramnodes = node.findall(f"{tag('technique_common')}/{tag('accessor')}/{tag('param')}")
         if not paramnodes:
             raise DaeIncompleteError('No accessor info in source node')
         components = [param.get('name') for param in paramnodes]

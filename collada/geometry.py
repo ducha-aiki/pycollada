@@ -189,7 +189,7 @@ class Geometry(DaeObject):
             raise DaeUnsupportedError('Unknown geometry node')
         sourcebyid = {}
         sources = []
-        sourcenodes = node.findall('%s/%s' % (tag_mesh, tag_source))
+        sourcenodes = node.findall(f"{tag_mesh}/{tag_source}")
         for sourcenode in sourcenodes:
             ch = source.Source.load(collada, {}, sourcenode)
             sources.append(ch)
@@ -210,7 +210,7 @@ class Geometry(DaeObject):
             sourcebyid[verticesnode.get('id')] = inputnodes
             verticesnode.get('id')
 
-        double_sided_node = node.find('.//%s//%s' % (tag_extra, tag_double_sided))
+        double_sided_node = node.find(f".//{tag_extra}//{tag_double_sided}")
         double_sided = False
         if double_sided_node is not None and double_sided_node.text is not None:
             try:

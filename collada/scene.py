@@ -588,14 +588,14 @@ class GeometryNode(SceneNode):
         for m in self.materials:
             m.save()
 
-        matparent = self.xmlnode.find('%s/%s' % (tag('bind_material'), tag('technique_common')))
+        matparent = self.xmlnode.find(f"{tag('bind_material')}/{tag('technique_common')}")
         if matparent is None and len(self.materials) == 0:
             return
         elif matparent is None:
             matparent = E.technique_common()
             self.xmlnode.append(E.bind_material(matparent))
         elif len(self.materials) == 0 and matparent is not None:
-            bindnode = self.xmlnode.find('%s' % tag('bind_material'))
+            bindnode = self.xmlnode.find(tag('bind_material'))
             self.xmlnode.remove(bindnode)
             return
 
