@@ -84,18 +84,18 @@ class Source(DaeObject):
     @staticmethod
     def load(collada, localscope, node):
         sourceid = node.get('id')
+        # Try float_array first (most common), pass found node to avoid re-lookup
         arraynode = node.find(collada.tag('float_array'))
         if arraynode is not None:
-            return FloatSource.load(collada, localscope, node)
+            return FloatSource.load(collada, localscope, node, arraynode)
         arraynode = node.find(collada.tag('IDREF_array'))
         if arraynode is not None:
-            return IDRefSource.load(collada, localscope, node)
+            return IDRefSource.load(collada, localscope, node, arraynode)
         arraynode = node.find(collada.tag('Name_array'))
         if arraynode is not None:
-            return NameSource.load(collada, localscope, node)
+            return NameSource.load(collada, localscope, node, arraynode)
 
-        if arraynode is None:
-            raise DaeIncompleteError('No array found in source %s' % sourceid)
+        raise DaeIncompleteError('No array found in source %s' % sourceid)
 
 
 class FloatSource(Source):
@@ -187,11 +187,12 @@ class FloatSource(Source):
         self.xmlnode.set('id', self.id)
 
     @staticmethod
-    def load(collada, localscope, node):
+    def load(collada, localscope, node, arraynode=None):
         sourceid = node.get('id')
-        arraynode = node.find(collada.tag('float_array'))
         if arraynode is None:
-            raise DaeIncompleteError('No float_array in source node')
+            arraynode = node.find(collada.tag('float_array'))
+            if arraynode is None:
+                raise DaeIncompleteError('No float_array in source node')
         if arraynode.text is None or arraynode.text.isspace():
             data = numpy.array([], dtype=numpy.float32)
         else:
@@ -306,16 +307,17 @@ class IDRefSource(Source):
         self.xmlnode.set('id', self.id)
 
     @staticmethod
-    def load(collada, localscope, node):
+    def load(collada, localscope, node, arraynode=None):
         sourceid = node.get('id')
-        arraynode = node.find(tag('IDREF_array'))
         if arraynode is None:
-            raise DaeIncompleteError('No IDREF_array in source node')
+            arraynode = node.find(collada.tag('IDREF_array'))
+            if arraynode is None:
+                raise DaeIncompleteError('No IDREF_array in source node')
         if arraynode.text is None or arraynode.text.isspace():
             values = []
         else:
             try:
-                values = [v for v in arraynode.text.split()]
+                values = arraynode.text.split()
             except ValueError:
                 raise DaeMalformedError('Corrupted IDREF array')
         data = numpy.array(values, dtype=numpy.str_)
@@ -413,20 +415,21 @@ class NameSource(Source):
         self.xmlnode.set('id', self.id)
 
     @staticmethod
-    def load(collada, localscope, node):
+    def load(collada, localscope, node, arraynode=None):
         sourceid = node.get('id')
-        arraynode = node.find(tag('Name_array'))
         if arraynode is None:
-            raise DaeIncompleteError('No Name_array in source node')
+            arraynode = node.find(collada.tag('Name_array'))
+            if arraynode is None:
+                raise DaeIncompleteError('No Name_array in source node')
         if arraynode.text is None or arraynode.text.isspace():
             values = []
         else:
             try:
-                values = [v for v in arraynode.text.split()]
+                values = arraynode.text.split()
             except ValueError:
                 raise DaeMalformedError('Corrupted Name array')
         data = numpy.array(values, dtype=numpy.str_)
-        paramnodes = node.findall(f"{tag('technique_common')}/{tag('accessor')}/{tag('param')}")
+        paramnodes = node.findall(f"{collada.tag('technique_common')}/{collada.tag('accessor')}/{collada.tag('param')}")
         if not paramnodes:
             raise DaeIncompleteError('No accessor info in source node')
         components = [param.get('name') for param in paramnodes]
