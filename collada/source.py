@@ -32,9 +32,7 @@ class InputList(object):
 
     def __init__(self):
         """Create an input list"""
-        self.inputs = {}
-        for s in self.semantics:
-            self.inputs[s] = []
+        self.inputs = {s: [] for s in self.semantics}
 
     def addInput(self, offset, semantic, src, set=None):
         """Add an input source to this input list.

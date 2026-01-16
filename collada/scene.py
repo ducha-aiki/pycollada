@@ -595,9 +595,7 @@ class GeometryNode(SceneNode):
         if tipo == 'geometry':
             if matrix is None:
                 matrix = _IDENTITY_MATRIX
-            materialnodesbysymbol = {}
-            for mat in self.materials:
-                materialnodesbysymbol[mat.symbol] = mat
+            materialnodesbysymbol = {mat.symbol: mat for mat in self.materials}
             yield self.geometry.bind(matrix, materialnodesbysymbol)
 
     @staticmethod
@@ -610,9 +608,7 @@ class GeometryNode(SceneNode):
             raise DaeBrokenRefError('Geometry %s not found in library' % url)
         mat_xpath = f"{collada.tag('bind_material')}/{collada.tag('technique_common')}/{collada.tag('instance_material')}"
         matnodes = node.findall(mat_xpath)
-        materials = []
-        for matnode in matnodes:
-            materials.append(MaterialNode.load(collada, matnode))
+        materials = [MaterialNode.load(collada, matnode) for matnode in matnodes]
         return GeometryNode(geometry, materials, xmlnode=node)
 
     def save(self):
@@ -688,9 +684,7 @@ class ControllerNode(SceneNode):
         if tipo == 'controller':
             if matrix is None:
                 matrix = _IDENTITY_MATRIX
-            materialnodesbysymbol = {}
-            for mat in self.materials:
-                materialnodesbysymbol[mat.symbol] = mat
+            materialnodesbysymbol = {mat.symbol: mat for mat in self.materials}
             yield self.controller.bind(matrix, materialnodesbysymbol)
 
     @staticmethod
@@ -703,9 +697,7 @@ class ControllerNode(SceneNode):
             raise DaeBrokenRefError('Controller %s not found in library' % url)
         mat_xpath = f"{collada.tag('bind_material')}/{collada.tag('technique_common')}/{collada.tag('instance_material')}"
         matnodes = node.findall(mat_xpath)
-        materials = []
-        for matnode in matnodes:
-            materials.append(MaterialNode.load(collada, matnode))
+        materials = [MaterialNode.load(collada, matnode) for matnode in matnodes]
         return ControllerNode(controller, materials, xmlnode=node)
 
     def save(self):

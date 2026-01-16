@@ -39,11 +39,9 @@ class Controller(DaeObject):
             raise DaeUnsupportedError('Unknown controller node')
 
         sourcebyid = {}
-        sources = []
         sourcenodes = node.findall(f"{controller.tag}/{collada.tag('source')}")
         for sourcenode in sourcenodes:
             ch = source.Source.load(collada, {}, sourcenode)
-            sources.append(ch)
             sourcebyid[ch.id] = ch
 
         if controller.tag == collada.tag('skin'):
@@ -130,9 +128,7 @@ class Skin(Controller):
         joint_matrices.shape = (-1, 4, 4)
         if len(joint_names) != len(joint_matrices):
             raise DaeMalformedError("Skin joint and matrix inputs must be same length")
-        self.joint_matrices = {}
-        for n, m in zip(joint_names, joint_matrices):
-            self.joint_matrices[n] = m
+        self.joint_matrices = dict(zip(joint_names, joint_matrices))
 
         if not (weight_source in sourcebyid and weight_joint_source in sourcebyid):
             raise DaeBrokenRefError("Weights input in joints not found")
