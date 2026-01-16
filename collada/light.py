@@ -90,7 +90,7 @@ class DirectionalLight(Light):
         if colornode is None:
             raise DaeIncompleteError('Missing color for directional light')
         try:
-            color = tuple([float(v) for v in colornode.text.split()])
+            color = tuple(float(v) for v in colornode.text.split())
         except ValueError:
             raise DaeMalformedError('Corrupted color values in light definition')
         return DirectionalLight(node.get('id'), color, xmlnode=node)
@@ -159,7 +159,7 @@ class AmbientLight(Light):
         if colornode is None:
             raise DaeIncompleteError('Missing color for ambient light')
         try:
-            color = tuple([float(v) for v in colornode.text.split()])
+            color = tuple(float(v) for v in colornode.text.split())
         except ValueError:
             raise DaeMalformedError('Corrupted color values in light definition')
         return AmbientLight(node.get('id'), color, xmlnode=node)
@@ -263,7 +263,7 @@ class PointLight(Light):
         if colornode is None:
             raise DaeIncompleteError('Missing color for point light')
         try:
-            color = tuple([float(v) for v in colornode.text.split()])
+            color = tuple(float(v) for v in colornode.text.split())
         except ValueError:
             raise DaeMalformedError('Corrupted color values in light definition')
         constant_att = linear_att = quad_att = zfar = None
@@ -388,7 +388,7 @@ class SpotLight(Light):
         if colornode is None:
             raise DaeIncompleteError('Missing color for spot light')
         try:
-            color = tuple([float(v) for v in colornode.text.split()])
+            color = tuple(float(v) for v in colornode.text.split())
         except ValueError:
             raise DaeMalformedError('Corrupted color values in spot light definition')
         constant_att = linear_att = quad_att = falloff_ang = falloff_exp = None
