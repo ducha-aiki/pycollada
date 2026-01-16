@@ -448,14 +448,48 @@ class Node(SceneNode):
         name = node.get('name')
         children = []
         transforms = []
+        
+        # Get or build dispatch table (same as loadNode uses)
+        dispatch = getattr(collada, '_node_dispatch', None)
+        if dispatch is None:
+            dispatch = {
+                collada.tag('node'): ('node', Node, False),
+                collada.tag('translate'): ('simple', TranslateTransform, True),
+                collada.tag('rotate'): ('simple', RotateTransform, True),
+                collada.tag('scale'): ('simple', ScaleTransform, True),
+                collada.tag('matrix'): ('simple', MatrixTransform, True),
+                collada.tag('lookat'): ('simple', LookAtTransform, True),
+                collada.tag('instance_geometry'): ('simple', GeometryNode, False),
+                collada.tag('instance_camera'): ('simple', CameraNode, False),
+                collada.tag('instance_light'): ('simple', LightNode, False),
+                collada.tag('instance_controller'): ('simple', ControllerNode, False),
+                collada.tag('instance_node'): ('node', NodeNode, False),
+                collada.tag('extra'): ('simple', ExtraNode, False),
+                collada.tag('asset'): ('none', None, False),
+            }
+            collada._node_dispatch = dispatch
 
         for subnode in node:
+            entry = dispatch.get(subnode.tag)
+            if entry is None:
+                collada.handleError(DaeUnsupportedError('Unknown scene node %s' % str(subnode.tag)))
+                continue
+            
+            load_type, loader_class, is_transform = entry
+            if load_type == 'none':
+                continue
+            
             try:
-                n = loadNode(collada, subnode, localscope)
-                if isinstance(n, Transform):
-                    transforms.append(n)
-                elif n is not None:
-                    children.append(n)
+                if load_type == 'node':
+                    n = loader_class.load(collada, subnode, localscope)
+                else:
+                    n = loader_class.load(collada, subnode)
+                
+                if n is not None:
+                    if is_transform:
+                        transforms.append(n)
+                    else:
+                        children.append(n)
             except DaeError as ex:
                 collada.handleError(ex)
 
@@ -901,26 +935,26 @@ def loadNode(collada, node, localscope):
     dispatch = getattr(collada, '_node_dispatch', None)
     if dispatch is None:
         dispatch = {
-            collada.tag('node'): ('node', Node),
-            collada.tag('translate'): ('simple', TranslateTransform),
-            collada.tag('rotate'): ('simple', RotateTransform),
-            collada.tag('scale'): ('simple', ScaleTransform),
-            collada.tag('matrix'): ('simple', MatrixTransform),
-            collada.tag('lookat'): ('simple', LookAtTransform),
-            collada.tag('instance_geometry'): ('simple', GeometryNode),
-            collada.tag('instance_camera'): ('simple', CameraNode),
-            collada.tag('instance_light'): ('simple', LightNode),
-            collada.tag('instance_controller'): ('simple', ControllerNode),
-            collada.tag('instance_node'): ('node', NodeNode),
-            collada.tag('extra'): ('simple', ExtraNode),
-            collada.tag('asset'): ('none', None),
+            collada.tag('node'): ('node', Node, False),
+            collada.tag('translate'): ('simple', TranslateTransform, True),
+            collada.tag('rotate'): ('simple', RotateTransform, True),
+            collada.tag('scale'): ('simple', ScaleTransform, True),
+            collada.tag('matrix'): ('simple', MatrixTransform, True),
+            collada.tag('lookat'): ('simple', LookAtTransform, True),
+            collada.tag('instance_geometry'): ('simple', GeometryNode, False),
+            collada.tag('instance_camera'): ('simple', CameraNode, False),
+            collada.tag('instance_light'): ('simple', LightNode, False),
+            collada.tag('instance_controller'): ('simple', ControllerNode, False),
+            collada.tag('instance_node'): ('node', NodeNode, False),
+            collada.tag('extra'): ('simple', ExtraNode, False),
+            collada.tag('asset'): ('none', None, False),
         }
         collada._node_dispatch = dispatch
 
     entry = dispatch.get(node.tag)
     if entry is None:
         raise DaeUnsupportedError('Unknown scene node %s' % str(node.tag))
-    load_type, loader_class = entry
+    load_type, loader_class, _ = entry
     if load_type == 'node':
         return loader_class.load(collada, node, localscope)
     elif load_type == 'simple':
