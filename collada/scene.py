@@ -595,7 +595,7 @@ class GeometryNode(SceneNode):
             matparent = E.technique_common()
             self.xmlnode.append(E.bind_material(matparent))
         elif len(self.materials) == 0 and matparent is not None:
-            bindnode = self.xmlnode.find(tag('bind_material'))
+            bindnode = self.xmlnode.find('%s' % tag('bind_material'))
             self.xmlnode.remove(bindnode)
             return
 
