@@ -198,10 +198,14 @@ class FloatSource(Source):
                 data = numpy.fromstring(arraynode.text, dtype=numpy.float32, sep=' ')
             except ValueError:
                 raise DaeMalformedError('Corrupted float array')
-        # Replace NaN values with 0
-        data[numpy.isnan(data)] = 0
+            # Replace NaN values with 0
+            data[numpy.isnan(data)] = 0
 
-        accessor_path = f"{collada.tag('technique_common')}/{collada.tag('accessor')}/{collada.tag('param')}"
+        # Use cached xpath or build and cache it
+        accessor_path = getattr(collada, '_floatsource_accessor_xpath', None)
+        if accessor_path is None:
+            accessor_path = f"{collada.tag('technique_common')}/{collada.tag('accessor')}/{collada.tag('param')}"
+            collada._floatsource_accessor_xpath = accessor_path
         paramnodes = node.findall(accessor_path)
         if not paramnodes:
             raise DaeIncompleteError('No accessor info in source node')
@@ -319,7 +323,12 @@ class IDRefSource(Source):
             except ValueError:
                 raise DaeMalformedError('Corrupted IDREF array')
         data = numpy.array(values, dtype=numpy.str_)
-        paramnodes = node.findall(f"{collada.tag('technique_common')}/{collada.tag('accessor')}/{collada.tag('param')}")
+        # Use cached xpath (same as FloatSource) or build and cache it
+        accessor_path = getattr(collada, '_floatsource_accessor_xpath', None)
+        if accessor_path is None:
+            accessor_path = f"{collada.tag('technique_common')}/{collada.tag('accessor')}/{collada.tag('param')}"
+            collada._floatsource_accessor_xpath = accessor_path
+        paramnodes = node.findall(accessor_path)
         if not paramnodes:
             raise DaeIncompleteError('No accessor info in source node')
         components = [param.get('name') for param in paramnodes]
@@ -427,7 +436,12 @@ class NameSource(Source):
             except ValueError:
                 raise DaeMalformedError('Corrupted Name array')
         data = numpy.array(values, dtype=numpy.str_)
-        paramnodes = node.findall(f"{collada.tag('technique_common')}/{collada.tag('accessor')}/{collada.tag('param')}")
+        # Use cached xpath (same as FloatSource) or build and cache it
+        accessor_path = getattr(collada, '_floatsource_accessor_xpath', None)
+        if accessor_path is None:
+            accessor_path = f"{collada.tag('technique_common')}/{collada.tag('accessor')}/{collada.tag('param')}"
+            collada._floatsource_accessor_xpath = accessor_path
+        paramnodes = node.findall(accessor_path)
         if not paramnodes:
             raise DaeIncompleteError('No accessor info in source node')
         components = [param.get('name') for param in paramnodes]

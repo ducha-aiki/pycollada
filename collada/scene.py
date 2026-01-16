@@ -606,7 +606,11 @@ class GeometryNode(SceneNode):
         geometry = collada.geometries.get(url[1:])
         if not geometry:
             raise DaeBrokenRefError('Geometry %s not found in library' % url)
-        mat_xpath = f"{collada.tag('bind_material')}/{collada.tag('technique_common')}/{collada.tag('instance_material')}"
+        # Use cached xpath or build and cache it
+        mat_xpath = getattr(collada, '_geomnode_mat_xpath', None)
+        if mat_xpath is None:
+            mat_xpath = f"{collada.tag('bind_material')}/{collada.tag('technique_common')}/{collada.tag('instance_material')}"
+            collada._geomnode_mat_xpath = mat_xpath
         matnodes = node.findall(mat_xpath)
         materials = [MaterialNode.load(collada, matnode) for matnode in matnodes]
         return GeometryNode(geometry, materials, xmlnode=node)
@@ -695,7 +699,11 @@ class ControllerNode(SceneNode):
         controller = collada.controllers.get(url[1:])
         if not controller:
             raise DaeBrokenRefError('Controller %s not found in library' % url)
-        mat_xpath = f"{collada.tag('bind_material')}/{collada.tag('technique_common')}/{collada.tag('instance_material')}"
+        # Use cached xpath (same as GeometryNode) or build and cache it
+        mat_xpath = getattr(collada, '_geomnode_mat_xpath', None)
+        if mat_xpath is None:
+            mat_xpath = f"{collada.tag('bind_material')}/{collada.tag('technique_common')}/{collada.tag('instance_material')}"
+            collada._geomnode_mat_xpath = mat_xpath
         matnodes = node.findall(mat_xpath)
         materials = [MaterialNode.load(collada, matnode) for matnode in matnodes]
         return ControllerNode(controller, materials, xmlnode=node)
