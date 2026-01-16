@@ -219,7 +219,6 @@ class Geometry(DaeObject):
                     pass
 
         _primitives = []
-        # Use sets for faster membership testing
         tri_tags = {tag_triangles, tag_tristrips, tag_trifans}
         skip_tags = {tag_source, tag_vertices, tag_extra}
 
