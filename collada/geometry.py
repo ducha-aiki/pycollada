@@ -186,14 +186,32 @@ class Geometry(DaeObject):
         meshnode = node.find(tag_mesh)
         if meshnode is None:
             raise DaeUnsupportedError('Unknown geometry node')
-        
-        # Use meshnode directly instead of re-traversing from node
-        sourcebyid = {}
-        for sourcenode in meshnode.iterfind(tag_source):
-            ch = source.Source.load(collada, {}, sourcenode)
-            sourcebyid[ch.id] = ch
 
-        verticesnode = meshnode.find(tag_vertices)
+        # Single pass over meshnode: collect sources, vertices, and primitive nodes
+        sourcebyid = {}
+        verticesnode = None
+        primitive_nodes = []
+        tri_tags = {tag_triangles, tag_tristrips, tag_trifans}
+
+        for subnode in meshnode:
+            tag = subnode.tag
+            if tag == tag_source:
+                ch = source.Source.load(collada, {}, subnode)
+                sourcebyid[ch.id] = ch
+            elif tag == tag_vertices:
+                verticesnode = subnode
+            elif tag == tag_polylist:
+                primitive_nodes.append(('polylist', subnode))
+            elif tag in tri_tags:
+                primitive_nodes.append(('triangles', subnode))
+            elif tag == tag_lines:
+                primitive_nodes.append(('lines', subnode))
+            elif tag == tag_polygons:
+                primitive_nodes.append(('polygons', subnode))
+            elif tag != tag_extra:
+                raise DaeUnsupportedError('Unknown geometry tag %s' % tag)
+
+        # Process vertices node (needs sourcebyid populated)
         if verticesnode is not None:
             inputnodes = {}
             for inputnode in verticesnode.iterfind(tag_input):
@@ -207,6 +225,7 @@ class Geometry(DaeObject):
                 raise DaeIncompleteError('Bad vertices definition in mesh')
             sourcebyid[vertices_id] = inputnodes
 
+        # Check for double_sided in extra nodes (on parent node, not meshnode)
         double_sided = False
         for extra in node.iterfind(tag_extra):
             double_sided_node = extra.find(f".//{tag_double_sided}")
@@ -218,22 +237,18 @@ class Geometry(DaeObject):
                 except ValueError:
                     pass
 
+        # Load primitives (needs complete sourcebyid with vertices)
         _primitives = []
-        tri_tags = {tag_triangles, tag_tristrips, tag_trifans}
-        skip_tags = {tag_source, tag_vertices, tag_extra}
+        for ptype, pnode in primitive_nodes:
+            if ptype == 'polylist':
+                _primitives.append(polylist.Polylist.load(collada, sourcebyid, pnode))
+            elif ptype == 'triangles':
+                _primitives.append(triangleset.TriangleSet.load(collada, sourcebyid, pnode))
+            elif ptype == 'lines':
+                _primitives.append(lineset.LineSet.load(collada, sourcebyid, pnode))
+            else:  # polygons
+                _primitives.append(polygons.Polygons.load(collada, sourcebyid, pnode))
 
-        for subnode in meshnode:
-            if subnode.tag == tag_polylist:
-                _primitives.append(polylist.Polylist.load(collada, sourcebyid, subnode))
-            elif subnode.tag in tri_tags:
-                _primitives.append(triangleset.TriangleSet.load(collada, sourcebyid, subnode))
-            elif subnode.tag == tag_lines:
-                _primitives.append(lineset.LineSet.load(collada, sourcebyid, subnode))
-            elif subnode.tag == tag_polygons:
-                _primitives.append(polygons.Polygons.load(collada, sourcebyid, subnode))
-            elif subnode.tag not in skip_tags:
-                raise DaeUnsupportedError('Unknown geometry tag %s' % subnode.tag)
-        
         return Geometry(collada, id, name, sourcebyid, _primitives, xmlnode=node, double_sided=double_sided)
 
     def save(self):
