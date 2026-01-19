@@ -449,25 +449,9 @@ class Node(SceneNode):
         children = []
         transforms = []
 
-        # Get or build dispatch table (same as loadNode uses)
         dispatch = getattr(collada, '_node_dispatch', None)
         if dispatch is None:
-            dispatch = {
-                collada.tag('node'): ('node', Node, False),
-                collada.tag('translate'): ('simple', TranslateTransform, True),
-                collada.tag('rotate'): ('simple', RotateTransform, True),
-                collada.tag('scale'): ('simple', ScaleTransform, True),
-                collada.tag('matrix'): ('simple', MatrixTransform, True),
-                collada.tag('lookat'): ('simple', LookAtTransform, True),
-                collada.tag('instance_geometry'): ('simple', GeometryNode, False),
-                collada.tag('instance_camera'): ('simple', CameraNode, False),
-                collada.tag('instance_light'): ('simple', LightNode, False),
-                collada.tag('instance_controller'): ('simple', ControllerNode, False),
-                collada.tag('instance_node'): ('node', NodeNode, False),
-                collada.tag('extra'): ('simple', ExtraNode, False),
-                collada.tag('asset'): ('none', None, False),
-            }
-            collada._node_dispatch = dispatch
+            dispatch = _build_node_dispatch(collada)
 
         for subnode in node:
             entry = dispatch.get(subnode.tag)
@@ -923,6 +907,27 @@ class ExtraNode(SceneNode):
         pass
 
 
+def _build_node_dispatch(collada):
+    """Build the node dispatch table and cache it on the collada object."""
+    dispatch = {
+        collada.tag('node'): ('node', Node, False),
+        collada.tag('translate'): ('simple', TranslateTransform, True),
+        collada.tag('rotate'): ('simple', RotateTransform, True),
+        collada.tag('scale'): ('simple', ScaleTransform, True),
+        collada.tag('matrix'): ('simple', MatrixTransform, True),
+        collada.tag('lookat'): ('simple', LookAtTransform, True),
+        collada.tag('instance_geometry'): ('simple', GeometryNode, False),
+        collada.tag('instance_camera'): ('simple', CameraNode, False),
+        collada.tag('instance_light'): ('simple', LightNode, False),
+        collada.tag('instance_controller'): ('simple', ControllerNode, False),
+        collada.tag('instance_node'): ('node', NodeNode, False),
+        collada.tag('extra'): ('simple', ExtraNode, False),
+        collada.tag('asset'): ('none', None, False),
+    }
+    collada._node_dispatch = dispatch
+    return dispatch
+
+
 def loadNode(collada, node, localscope):
     """Generic scene node loading from an xml `node` and a `collada` object.
 
@@ -930,26 +935,10 @@ def loadNode(collada, node, localscope):
     and return it.
 
     """
-    # Use dispatch dictionary for efficient tag-based routing
-    # Build or retrieve cached dispatch table
+    # Inline check, call builder only if needed
     dispatch = getattr(collada, '_node_dispatch', None)
     if dispatch is None:
-        dispatch = {
-            collada.tag('node'): ('node', Node, False),
-            collada.tag('translate'): ('simple', TranslateTransform, True),
-            collada.tag('rotate'): ('simple', RotateTransform, True),
-            collada.tag('scale'): ('simple', ScaleTransform, True),
-            collada.tag('matrix'): ('simple', MatrixTransform, True),
-            collada.tag('lookat'): ('simple', LookAtTransform, True),
-            collada.tag('instance_geometry'): ('simple', GeometryNode, False),
-            collada.tag('instance_camera'): ('simple', CameraNode, False),
-            collada.tag('instance_light'): ('simple', LightNode, False),
-            collada.tag('instance_controller'): ('simple', ControllerNode, False),
-            collada.tag('instance_node'): ('node', NodeNode, False),
-            collada.tag('extra'): ('simple', ExtraNode, False),
-            collada.tag('asset'): ('none', None, False),
-        }
-        collada._node_dispatch = dispatch
+        dispatch = _build_node_dispatch(collada)
 
     entry = dispatch.get(node.tag)
     if entry is None:
